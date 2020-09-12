@@ -1,0 +1,2 @@
+# solrStreamingExpressions
+Solr Streaming Expressions
