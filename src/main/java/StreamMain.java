@@ -46,23 +46,63 @@ public class StreamMain {
             SolrInputDocument result = new SolrInputDocument();
 
             result.addField("id", String.valueOf(record.getRecordNumber()));
-            result.addField("address_s", record.get("Hotel_Address").trim());
-            result.addField("name_s", record.get("Hotel_Name").trim());
-            result.addField("averageScore_f", Float.parseFloat(record.get("Average_Score")));
-            result.addField("reviewerNationality_s", record.get("Reviewer_Nationality").trim());
-            result.addField("positiveReview_s", record.get("Positive_Review").trim());
-            result.addField("negativeReview_s", record.get("Negative_Review").trim());
-            result.addField("reviewerScore_f", Float.parseFloat(record.get("Reviewer_Score")));
-            result.addField("tags_s", record.get("Tags").trim());
+
+            final String name =  record.get("Hotel_Name").trim();
+            if (name != null) result.addField("name_s", name);
+
+            final String address = record.get("Hotel_Address").trim();
+            if (address != null) result.addField("address_s", address);
+
+            if (record.get("Average_Score") != null && record.get("Average_Score").length() != 0) {
+                result.addField("average_score_f", Float.parseFloat(record.get("Average_Score")));
+            }
+
             if (record.get("lat") != null && record.get("lng") != null) {
                 try {
                     result.addField("loc_p", Double.parseDouble(record.get("lat"))+ "," + Double.parseDouble(record.get("lng")));
                 } catch (Exception e) {
                     logger.info("No location point provided");
                 }
-
             }
 
+            final String reviewer_nationality = record.get("Reviewer_Nationality").trim();
+            if (reviewer_nationality != null && reviewer_nationality.length() != 0)
+                result.addField("reviewer_nationality_s", reviewer_nationality );
+
+            final String positive_review = record.get("Positive_Review").trim();
+            if (positive_review!= null && positive_review.length() != 0) {
+                result.addField("positive_review_t", positive_review );
+            }
+
+            final String positive_review_word_counts = record.get("Review_Total_Positive_Word_Counts").trim();
+            if (positive_review_word_counts != null ) {
+                result.addField("positive_review_word_counts_i", Integer.valueOf(positive_review_word_counts));
+            }
+
+            final String negative_review = record.get("Negative_Review").trim();
+            if (negative_review!= null && negative_review.length() != 0) {
+                result.addField("negative_review_t", negative_review );
+            }
+
+            final String negative_review_word_counts = record.get("Review_Total_Negative_Word_Counts").trim();
+            if (negative_review_word_counts != null ) {
+                result.addField("negative_review_word_counts_i", Integer.valueOf(negative_review_word_counts));
+            }
+
+            final String reviewer_score = record.get("Reviewer_Score");
+            if (reviewer_score != null && reviewer_score.length() != 0) {
+                result.addField("reviewer_score_f", Float.parseFloat(reviewer_score));
+            }
+
+            final String tags = record.get("Tags").trim();
+            if (tags != null && tags.length() != 0) {
+                result.addField("tags_s", tags);
+            }
+
+            final String review_date = record.get("Review_Date");
+            if (review_date != null && review_date.length() != 0) {
+                result.addField("review_date_tdt", review_date);
+            }
             return result;
         };
     }
