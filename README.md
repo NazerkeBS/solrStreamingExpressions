@@ -71,10 +71,7 @@ Now zeppelin is running locally on port 8080 (http://localhost:8080)
 Create interpreter setting in 'Interpreter' menu on Zeppelin GUI
 In the interpreter, you provide solr url `solr.baseUrl=http://localhost:8983/solr` 
 and collection name `solr.collection=hotels`
-![interpreter on GUI](interpreter.png)
-
-Then you can bind the interpreter on your note:
-![solrNote on GUI](noteSolr.png)
+Then you can bind the interpreter on your note.
 
 #### Dataset to work with (Hotel Reviews)
 I have taken Hotel Reviews in Europe dataset from Kaggle (https://www.kaggle.com/jiashenliu/515k-hotel-reviews-data-in-europe)
