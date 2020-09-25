@@ -51,11 +51,7 @@ public class StreamMain {
             if (name != null) result.addField("name_s", name);
 
             final String address = record.get("Hotel_Address").trim();
-            if (address != null) result.addField("address_s", address);
-
-            if (record.get("Average_Score") != null && record.get("Average_Score").length() != 0) {
-                result.addField("average_score_f", Float.parseFloat(record.get("Average_Score")));
-            }
+            if (address != null) result.addField("address_txt_sort", address);
 
             if (record.get("lat") != null && record.get("lng") != null) {
                 try {

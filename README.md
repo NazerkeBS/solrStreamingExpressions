@@ -97,8 +97,7 @@ Then you can run the main method. Basically this class reads the Hotel_Reviews.c
 parseCSV(cat("Hotel_Reviews.csv",maxLines=200000))
 
 select(
-    parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_s,
-        Average_Score as average_score_f,
+    parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_txt_sort,
         lng as lan_p, lat as lat_p, Tags as tags_s,
         Reviewer_Nationality as reviewer_nationality_s, 
         Negative_Review as negative_review_t, Review_Total_Negative_Word_Counts as negative_review_word_counts_i,
@@ -107,54 +106,69 @@ select(
 
 update(hotels, 
        batchSize=10,
-       select(parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_s,
-                Average_Score as average_score_f,
-                lng as lan_f, lat as lat_f, Tags as tags_s,
-                Reviewer_Nationality as reviewer_nationality_s, 
-                Negative_Review as negative_review_t, Review_Total_Negative_Word_Counts as negative_review_word_counts_i,
-                Positive_Review as positive_review_t, Review_Total_Positive_Word_Counts as positive_review_word_counts_i,
-                Reviewer_Score as reviewer_score_f, Review_Date as review_date_tdt))
+       select(
+           parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_txt_sort,
+               lng as lan_p, lat as lat_p, Tags as tags_s,
+               Reviewer_Nationality as reviewer_nationality_s, 
+               Negative_Review as negative_review_t, Review_Total_Negative_Word_Counts as negative_review_word_counts_i,
+               Positive_Review as positive_review_t, Review_Total_Positive_Word_Counts as positive_review_word_counts_i,
+               Reviewer_Score as reviewer_score_f, Review_Date as review_date_dt ))
 
 commit(hotels, batchSize=10,
     update(hotels, 
-       batchSize=10,
-       select(parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_s,
-                Average_Score as average_score_f,
-                lng as lan_f, lat as lat_f, Tags as tags_s,
-                Reviewer_Nationality as reviewer_nationality_s, 
-                Negative_Review as negative_review_t, Review_Total_Negative_Word_Counts as negative_review_word_counts_i,
-                Positive_Review as positive_review_t, Review_Total_Positive_Word_Counts as positive_review_word_counts_i,
-                Reviewer_Score as reviewer_score_f, Review_Date as review_date_tdt)))
+           batchSize=10,
+           select(
+               parseCSV(cat("Hotel_Reviews.csv",maxLines=200000)), id, Hotel_Name as name_s, Hotel_Address as address_txt_sort,
+                   lng as lan_p, lat as lat_p, Tags as tags_s,
+                   Reviewer_Nationality as reviewer_nationality_s, 
+                   Negative_Review as negative_review_t, Review_Total_Negative_Word_Counts as negative_review_word_counts_i,
+                   Positive_Review as positive_review_t, Review_Total_Positive_Word_Counts as positive_review_word_counts_i,
+                   Reviewer_Score as reviewer_score_f, Review_Date as review_date_dt )))
 ```
 
 #### Query, analyze, transform and visualize data
-List hotels and their locations:
+List hotels:
 ```
-rollup(search(hotels, q="*:*", fl="name_s,loc_p", sort="name_s asc", qt="/select", rows=100000), over="name_s, loc_p", count(*))
+unique(search(hotels, q="*:*", fl="name_s",sort="name_s asc", qt="/export"), over="name_s")
 ``` 
 
 List hotels which have more positive reviews:
 ```
-having(rollup(search(hotels, q="*:*", fl="name_s, average_score_f, reviewer_score_f, positive_review_word_counts_i,negative_review_word_counts_i", 
-              sort="name_s asc", qt="/select", rows=100000),
-        over="name_s, average_score_f, reviewer_score_f", sum(positive_review_word_counts_i), sum(negative_review_word_counts_i)), 
+having(rollup(search(hotels, q="*:*", fl="name_s, positive_review_word_counts_i,negative_review_word_counts_i", 
+              sort="name_s asc", qt="/export"),
+        over="name_s", sum(positive_review_word_counts_i), sum(negative_review_word_counts_i)), 
     gt(sum(positive_review_word_counts_i), sum(negative_review_word_counts_i)))
 ```
-And It can be visualized on heatmap the correlation between the average score and the number of negative reviews.
+
+Calculate the average score for each hotel based on the reviewer score:
+```
+select(rollup(search(hotels, q="*:*", fl="name_s, reviewer_score_f", sort="name_s asc", qt="/export"),
+        over="name_s", sum(reviewer_score_f), count(reviewer_score_f)), name_s, div(sum(reviewer_score_f), count(reviewer_score_f)) as average_score)
+```
+
+Correlation  between the average score and the number of negative reviews:
+```
+top(n=5, select(rollup(search(hotels, q="*:*", fl="name_s, reviewer_score_f, negative_review_word_counts_i", sort="name_s asc", qt="/export"),
+        over="name_s", sum(reviewer_score_f), count(reviewer_score_f), sum(negative_review_word_counts_i)), name_s, div(sum(reviewer_score_f), count(reviewer_score_f)) as average_score,
+        sum(negative_review_word_counts_i) as negative_review_word_counts) , sort="negative_review_word_counts desc")
+```
 
 
 Search for hotels in Paris: 
 ```
-rollup(search(hotels, q="address_s:*Paris*", fl="name_s,loc_p,average_score_f", sort="name_s asc", qt="/select", rows=100000),
-  over="name_s, loc_p, average_score_f", count(loc_p))
+unique(search(hotels, q="address_txt_sort:*Paris*", fl="name_s ", sort="name_s asc", qt="/export"),
+  over="name_s")
 ``` 
 
 List top 10 hotels in Paris with top positive reviews on a map: 
 ```
 let(a=top(n=10,
-          rollup(search(hotels, q="address_s:*Paris*", fl="name_s,loc_p,average_score_f,positive_review_word_counts_i", sort="name_s asc", qt="/select",rows=100000),
-                 over="name_s, loc_p, average_score_f, positive_review_word_counts_i", count(loc_p)), 
-          sort="positive_review_word_counts_i desc"), 
+          select(rollup(search(hotels, q="address_txt_sort:*Paris*", fl="name_s, loc_p, positive_review_word_counts_i,negative_review_word_counts_i", 
+                        sort="name_s asc", qt="/select", rows=100000),
+                  over="name_s, loc_p", sum(positive_review_word_counts_i), sum(negative_review_word_counts_i)), 
+              name_s, loc_p,
+              abs(sub(sum(positive_review_word_counts_i), sum(negative_review_word_counts_i))) as delta), 
+          sort="delta desc"), 
 b=latlonVectors(a,field="loc_p"), 
 lat=colAt(b,0),
 lon=colAt(b,1),
@@ -162,12 +176,12 @@ id=col(a,name_s),
 zplot(lat=lat,lon=lon,id=id))
 ```
 
-Top 10 hotels in Paris with the highest average scores:
+Top 5 hotels in Paris with the highest average scores:
 ```
-top(n=10, 
-    drill(hotels, q="address_s:*Paris*", fl="name_s, address_s, average_score_f", sort="name_s asc", rollup(input(), over="name_s, address_s, average_score_f", 
-        count(average_score_f))), 
-    sort="count(average_score_f) desc")
+top(n=5,
+    select(rollup(search(hotels, q="address_txt_sort:*Paris*", fl="name_s, reviewer_score_f", sort="name_s asc", qt="/export"),
+            over="name_s", sum(reviewer_score_f), count(reviewer_score_f)), name_s, div(sum(reviewer_score_f), count(reviewer_score_f)) as average_score), 
+    sort="average_score desc")
 ```
 
 Analyze data:
